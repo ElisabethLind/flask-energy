@@ -1,0 +1,56 @@
+<h1>This is a list of power plants</h1>
+
+ <!-- this is a  -->
+  <p>Jinja2 template</p>
+
+ <!-- if you do it like  this you see only plants-->
+<p>plants</p>
+
+<!-- there you get the variable plants -->
+<!-- you get a list of plants - not beautiful -->
+ <!-- p>{{plants}}</p> -->
+
+
+ <!-- for loop - same result  -->
+<!-- <p>Jinja2 template</p>
+{% for plant in plants %}
+    {{plant}}
+{% endfor %} -->
+
+
+
+<!-- gib mir die Namen der plants -->
+<!-- 
+<h1>This is a list of power plants</h1>
+
+<p>Jinja2 template</p>
+{% for plant in plants %}
+    {{ plant.plant_name }}
+{% endfor %} -->
+
+
+<!-- qwir brauchen zusätzliche kürzel, um es als list anzeigen zu lassen -->
+<!-- <h1>This is a list of power plants</h1>
+
+<p>Jinja2 template</p>
+
+<ul>
+{% for plant in plants %}
+    <li>{{ plant.plant_name }}</li>
+{% endfor %}
+</ul> -->
+
+<!-- wir wollen einen link bei jeder powerplant -->
+<h1>This is a list of power plants</h1>
+
+<p>Jinja2 template</p>
+
+<ul>
+{% for plant in plants %}
+    <li>
+        <a href="/plants/{{ plant.plant_code }}">
+            {{ plant.plant_name }}
+        </a>
+    </li>
+{% endfor %}
+</ul>

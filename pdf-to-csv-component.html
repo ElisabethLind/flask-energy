@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF to CSV Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.21.2/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.7.107/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.7.107/pdf.worker.min.js';</script>
+    <style>
+        .dropzone { border: 2px dashed #ccc; border-radius: 20px; padding: 20px; text-align: center; cursor: pointer; }
+        .active { border-color: #000; }
+        .container { display: flex; height: 100vh; }
+        .left, .right { width: 50%; padding: 20px; }
+        .right { display: flex; flex-direction: column; }
+        ul { flex-grow: 1; overflow-y: auto; }
+        button { margin-top: auto; padding: 10px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useCallback } = React;
+
+        function PdfToCsvConverter() {
+            const [pdfData, setPdfData] = useState([]);
+            const [isDragActive, setIsDragActive] = useState(false);
+
+            const onDrop = useCallback(async (acceptedFiles) => {
+                const newPdfData = await Promise.all(acceptedFiles.map(async (file) => {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    let fullText = '';
+
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        const pageText = content.items.map(item => item.str).join(' ');
+                        fullText += pageText + ' ';
+                    }
+
+                    return {
+                        name: file.name,
+                        text: fullText.trim(),
+                        size: file.size
+                    };
+                }));
+
+                setPdfData(prevData => [...prevData, ...newPdfData]);
+            }, []);
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                setIsDragActive(true);
+            };
+
+            const handleDragLeave = () => {
+                setIsDragActive(false);
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                setIsDragActive(false);
+                const files = Array.from(e.dataTransfer.files).filter(file => file.type === 'application/pdf');
+                onDrop(files);
+            };
+
+            const downloadCsv = () => {
+                const csv = [
+                    ['PDF Name', 'Text Content', 'File Size (bytes)'],
+                    ...pdfData.map(pdf => [pdf.name, pdf.text, pdf.size])
+                ].map(row => row.map(cell => `"${cell.toString().replace(/"/g, '""')}"`).join(',')).join('\n');
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                if (link.download !== undefined) {
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', 'pdf_data.csv');
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            };
+
+            return (
+                <div className="container">
+                    <div className="left">
+                        <div 
+                            className={`dropzone ${isDragActive ? 'active' : ''}`}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                        >
+                            <p>Drag 'n' drop some PDF files here, or click to select files</p>
+                            <input 
+                                type="file" 
+                                accept=".pdf" 
+                                multiple 
+                                onChange={(e) => onDrop(Array.from(e.target.files))}
+                                style={{display: 'none'}}
+                            />
+                        </div>
+                    </div>
+                    <div className="right">
+                        <h2>Uploaded PDFs</h2>
+                        <ul>
+                            {pdfData.map((pdf, index) => (
+                                <li key={index}>{pdf.name}</li>
+                            ))}
+                        </ul>
+                        <button onClick={downloadCsv} disabled={pdfData.length === 0}>
+                            Download CSV
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<PdfToCsvConverter />, document.getElementById('root'));
+    </script>
+</body>
+</html>
